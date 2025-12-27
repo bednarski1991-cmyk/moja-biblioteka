@@ -1,0 +1,268 @@
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Plus, Star, Calendar, SortAsc, Trash2 } from 'lucide-react';
+
+export default function BookTracker() {
+  const [books, setBooks] = useState([]);
+  const [activeTab, setActiveTab] = useState('add');
+  const [title, setTitle] = useState('');
+  const [rating, setRating] = useState(5);
+  const [sortBy, setSortBy] = useState('date');
+
+  // Wczytaj książki z localStorage przy starcie
+  useEffect(() => {
+    const savedBooks = localStorage.getItem('myBooks');
+    if (savedBooks) {
+      setBooks(JSON.parse(savedBooks));
+    }
+  }, []);
+
+  // Zapisz książki do localStorage przy każdej zmianie
+  useEffect(() => {
+    if (books.length > 0) {
+      localStorage.setItem('myBooks', JSON.stringify(books));
+    }
+  }, [books]);
+
+  const addBook = (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const newBook = {
+      id: Date.now(),
+      title: title.trim(),
+      rating: parseInt(rating),
+      dateAdded: new Date().toISOString()
+    };
+
+    setBooks([newBook, ...books]);
+    setTitle('');
+    setRating(5);
+    setActiveTab('list');
+  };
+
+  const deleteBook = (id) => {
+    setBooks(books.filter(book => book.id !== id));
+  };
+
+  const getSortedBooks = () => {
+    const booksCopy = [...books];
+    
+    switch(sortBy) {
+      case 'date':
+        return booksCopy.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+      case 'rating':
+        return booksCopy.sort((a, b) => b.rating - a.rating);
+      case 'title':
+        return booksCopy.sort((a, b) => a.title.localeCompare(b.title, 'pl'));
+      default:
+        return booksCopy;
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pl-PL', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const renderStars = (rating) => {
+    return (
+      <div className="flex gap-1">
+        {[...Array(10)].map((_, i) => (
+          <Star
+            key={i}
+            size={16}
+            fill={i < rating ? '#FFD700' : 'none'}
+            stroke={i < rating ? '#FFD700' : '#CBD5E0'}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="text-center mb-8 pt-6">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <BookOpen size={40} className="text-indigo-600" />
+            <h1 className="text-4xl font-bold text-indigo-900">Moja Biblioteka</h1>
+          </div>
+          <p className="text-indigo-600">Twój osobisty katalog przeczytanych książek</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 bg-white rounded-xl p-2 shadow-lg">
+          <button
+            onClick={() => setActiveTab('add')}
+            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'add'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Plus size={20} />
+            Dodaj książkę
+          </button>
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'list'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <BookOpen size={20} />
+            Moje książki ({books.length})
+          </button>
+        </div>
+
+        {/* Add Book Form */}
+        {activeTab === 'add' && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+              <Plus className="text-indigo-600" />
+              Dodaj nową książkę
+            </h2>
+            
+            <form onSubmit={addBook} className="space-y-6">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  Tytuł książki
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Wpisz tytuł książki..."
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors text-lg"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  Ocena: {rating}/10
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={rating}
+                    onChange={(e) => setRating(e.target.value)}
+                    className="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                  <span className="text-3xl font-bold text-indigo-600 min-w-[60px] text-center">
+                    {rating}
+                  </span>
+                </div>
+                <div className="mt-3 flex justify-center">
+                  {renderStars(parseInt(rating))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Dodaj do biblioteki
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Book List */}
+        {activeTab === 'list' && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <BookOpen className="text-indigo-600" />
+                Twoje książki
+              </h2>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <SortAsc className="text-gray-500" size={20} />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none bg-white flex-1 sm:flex-none"
+                >
+                  <option value="date">Data dodania</option>
+                  <option value="rating">Ocena</option>
+                  <option value="title">Alfabetycznie</option>
+                </select>
+              </div>
+            </div>
+
+            {books.length === 0 ? (
+              <div className="text-center py-12">
+                <BookOpen size={64} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">Nie masz jeszcze dodanych książek</p>
+                <button
+                  onClick={() => setActiveTab('add')}
+                  className="mt-4 text-indigo-600 font-semibold hover:underline"
+                >
+                  Dodaj swoją pierwszą książkę
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {getSortedBooks().map((book) => (
+                  <div
+                    key={book.id}
+                    className="border-2 border-gray-200 rounded-xl p-4 hover:border-indigo-300 transition-all hover:shadow-md"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          {book.title}
+                        </h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={16} />
+                            {formatDate(book.dateAdded)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {renderStars(book.rating)}
+                            <span className="font-bold text-indigo-600">
+                              {book.rating}/10
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => deleteBook(book.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                        title="Usuń książkę"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {books.length > 0 && (
+              <div className="mt-6 pt-6 border-t-2 border-gray-200 text-center">
+                <p className="text-gray-600">
+                  Przeczytanych książek: <span className="font-bold text-indigo-600">{books.length}</span>
+                </p>
+                <p className="text-gray-600 mt-1">
+                  Średnia ocena: <span className="font-bold text-indigo-600">
+                    {(books.reduce((sum, book) => sum + book.rating, 0) / books.length).toFixed(1)}/10
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
